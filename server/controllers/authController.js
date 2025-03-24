@@ -10,7 +10,10 @@ exports.registerUser = async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: 'Email already registered' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'Email already registered' 
+      });
     }
 
     // Create verification token
@@ -27,16 +30,32 @@ exports.registerUser = async (req, res) => {
       emailVerificationExpires: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
     });
 
+    // Save user
     await user.save();
 
-    // Send verification email
-    await sendVerificationEmail(user.email, verificationToken);
+    try {
+      // Send verification email
+      await sendVerificationEmail(user.email, verificationToken);
+    } catch (emailError) {
+      // If email sending fails, delete the user and return error
+      await User.findByIdAndDelete(user._id);
+      return res.status(500).json({ 
+        success: false,
+        message: 'Failed to send verification email. Please try again.',
+        error: emailError.message 
+      });
+    }
 
     res.status(201).json({
-      message: 'Registration successful. Please verify your email.'
+      success: true,
+      message: 'Registration successful'
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: 'Registration failed',
+      error: error.message 
+    });
   }
 };
 
