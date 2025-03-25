@@ -3,13 +3,13 @@ import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import { CssBaseline, Container, Box } from "@mui/material";
 import NotFound from "./pages/NotFound";
 import EmailVerification from "./pages/EmailVerification";
-import CustomerRegister from "./pages/CustomerRegister";
-import AdminRegister from "./pages/AdminRegister";
-import AdminLogin from "./pages/AdminLogin";
-import CustomerLogin from "./pages/CustomerLogin";
+import CustomerRegister from "./pages/Customer/CRegister";
+import AdminRegister from "./pages/Admin/ARegister";
+import AdminLogin from "./pages/Admin/ALogin";
+import CustomerLogin from "./pages/Customer/CLogin";
 import Landing from "./pages/Landing";
-import CustomerDashboard from "./pages/CustomerDashboard";
-import AdminDashboard from "./pages/AdminDashboard";
+import CustomerDashboard from "./pages/Customer/CDashboard";
+import AdminDashboard from "./pages/Admin/ADashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
