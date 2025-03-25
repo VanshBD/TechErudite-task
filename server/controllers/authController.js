@@ -1,6 +1,5 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
 const { sendVerificationEmail } = require('../utils/emailService');
 
 exports.registerUser = async (req, res) => {
@@ -10,51 +9,54 @@ exports.registerUser = async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Email already registered' 
+        message: 'Email already registered',
       });
     }
 
-    // Create verification token
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    
-    // Create new user
+    // Create user but set "verified" to false
     const user = new User({
       firstName,
       lastName,
       email,
       password,
       role,
-      emailVerificationToken: verificationToken,
-      emailVerificationExpires: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+      isVerified: false, // Ensure new users are unverified initially
     });
 
-    // Save user
+    // Save user to get an _id
     await user.save();
 
+    // Generate JWT verification token (valid for 24 hours)
+    const verificationToken = jwt.sign(
+      { userId: user._id, email: user.email ,role:user.role},
+      process.env.JWT_SECRET, // Ensure this is set in your .env file
+      { expiresIn: '24h' }
+    );
+
     try {
-      // Send verification email
+      // Send verification email with the JWT token
       await sendVerificationEmail(user.email, verificationToken);
     } catch (emailError) {
       // If email sending fails, delete the user and return error
       await User.findByIdAndDelete(user._id);
-      return res.status(500).json({ 
+      return res.status(500).json({
         success: false,
         message: 'Failed to send verification email. Please try again.',
-        error: emailError.message 
+        error: emailError.message,
       });
     }
 
     res.status(201).json({
       success: true,
-      message: 'Registration successful'
+      message: 'Registration successful. Please check your email to verify your account.',
     });
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: 'Registration failed',
-      error: error.message 
+      error: error.message,
     });
   }
 };
@@ -71,8 +73,8 @@ exports.adminLogin = async (req, res) => {
 
     // Check role
     if (user.role !== 'admin') {
-      return res.status(403).json({ 
-        message: 'You are not allowed to login from here' 
+      return res.status(403).json({
+        message: 'You are not allowed to login from here'
       });
     }
 
@@ -84,8 +86,8 @@ exports.adminLogin = async (req, res) => {
 
     // Check email verification
     if (!user.isEmailVerified) {
-      return res.status(401).json({ 
-        message: 'Please verify your email before logging in' 
+      return res.status(401).json({
+        message: 'Please verify your email before logging in'
       });
     }
 
@@ -96,7 +98,7 @@ exports.adminLogin = async (req, res) => {
       { expiresIn: '1d' }
     );
 
-    res.json({ 
+    res.json({
       token,
       user: {
         id: user._id,
@@ -114,26 +116,22 @@ exports.adminLogin = async (req, res) => {
 exports.verifyEmail = async (req, res) => {
   try {
     const { token } = req.params;
-
-    const user = await User.findOne({
-      emailVerificationToken: token,
-      emailVerificationExpires: { $gt: Date.now() }
-    });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId);
 
     if (!user) {
-      return res.status(400).json({ 
-        message: 'Invalid or expired verification token' 
-      });
+      return res.status(400).json({ message: "Invalid or expired verification link." });
     }
 
     user.isEmailVerified = true;
-    user.emailVerificationToken = undefined;
-    user.emailVerificationExpires = undefined;
     await user.save();
 
-    res.json({ message: 'Email verified successfully' });
+    res.json({
+      message: "Email successfully verified. Please log in.",
+      role: user.role, // Return user role
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: "Server error during verification." });
   }
 };
 
@@ -149,8 +147,8 @@ exports.customerLogin = async (req, res) => {
 
     // Check role
     if (user.role !== 'customer') {
-      return res.status(403).json({ 
-        message: 'You are not allowed to login from here' 
+      return res.status(403).json({
+        message: 'You are not allowed to login from here'
       });
     }
 
@@ -162,8 +160,8 @@ exports.customerLogin = async (req, res) => {
 
     // Check email verification
     if (!user.isEmailVerified) {
-      return res.status(401).json({ 
-        message: 'Please verify your email before logging in' 
+      return res.status(401).json({
+        message: 'Please verify your email before logging in'
       });
     }
 
@@ -174,7 +172,7 @@ exports.customerLogin = async (req, res) => {
       { expiresIn: '1d' }
     );
 
-    res.json({ 
+    res.json({
       token,
       user: {
         id: user._id,

@@ -11,10 +11,10 @@ exports.sendVerificationEmail = async (email, token) => {
       }
     });
 
-    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${token}`;
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify/${token}`;
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: process.env.EMAIL_USER ||"vanshbdobariya1312@gmail.com",
       to: email,
       subject: 'Verify Your Email Address',
       html: `

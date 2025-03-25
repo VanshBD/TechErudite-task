@@ -19,6 +19,6 @@ router.post('/login/admin', validateLogin, authController.adminLogin);
 router.post('/login/customer', validateLogin, authController.customerLogin);
 
 // Email verification
-router.get('/verify-email/:token', authController.verifyEmail);
+router.get('/verify/:token', authController.verifyEmail);
 
 module.exports = router; 
